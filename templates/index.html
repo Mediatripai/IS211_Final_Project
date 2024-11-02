@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Catalogue</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .book-list {
+            list-style: none;
+            padding: 0;
+        }
+        .book-item {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .book-item:last-child {
+            border-bottom: none;
+        }
+        .add-book {
+            margin-top: 20px;
+        }
+        .add-book input {
+            padding: 10px;
+            width: calc(100% - 20px);
+            margin-bottom: 10px;
+        }
+        .add-book button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>My Book Catalogue</h1>
+        <ul id="book-list" class="book-list"></ul>
+        <div class="add-book">
+            <input type="text" id="isbn" placeholder="Enter ISBN" />
+            <button onclick="addBook()">Add Book</button>
+        </div>
+    </div>
+
+    <script>
+        // Fetch all books for a user (assuming user_id = 1)
+        async function fetchBooks() {
+            const response = await fetch('/api/books?user_id=1');
+            const books = await response.json();
+            const bookList = document.getElementById('book-list');
+            bookList.innerHTML = '';
+
+            books.forEach(book => {
+                const li = document.createElement('li');
+                li.className = 'book-item';
+                li.textContent = `${book.title} by ${book.author} (ISBN: ${book.isbn})`;
+                bookList.appendChild(li);
+            });
+        }
+
+        // Add a new book
+        async function addBook() {
+            const isbn = document.getElementById('isbn').value;
+
+            // Make an API call to get book details using the ISBN (you'd normally validate this too)
+            const googleApiUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`;
+            const googleApiResponse = await fetch(googleApiUrl);
+            const googleData = await googleApiResponse.json();
+
+            if (!googleData.items || googleData.items.length === 0) {
+                alert('Book not found.');
+                return;
+            }
+
+            const book = googleData.items[0].volumeInfo;
+            const newBook = {
+                user_id: 1, // static user id for demo
+                isbn: isbn,
+                title: book.title,
+                author: book.authors ? book.authors.join(', ') : 'Unknown',
+                page_count: book.pageCount || 0,
+                average_rating: book.averageRating || 0,
+                thumbnail: book.imageLinks ? book.imageLinks.thumbnail : ''
+            };
+
+            await fetch('/api/books', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newBook)
+            });
+
+            document.getElementById('isbn').value = '';
+            fetchBooks(); // Refresh book list
+        }
+
+        // Fetch books on page load
+        fetchBooks();
+    </script>
+</body>
+</html>
